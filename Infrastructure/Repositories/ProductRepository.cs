@@ -1,8 +1,8 @@
 
+using Dapper;
 using Domain.Interfaces;
 using Domain.Models;
 using Infrastructure.Data;
-using Npgsql;
 
 namespace Infrastructure.Repositories;
 
@@ -13,89 +13,133 @@ public class ProductRepository : IProductRepository
     public void AddProduct(Product product)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand("insert into products (name, price, category_id) values (@name, @price, @category_id)", connection);
-
-        command.Parameters.AddWithValue("@name", product.Name ?? "");
-        command.Parameters.AddWithValue("@price", product.Price);
-        command.Parameters.AddWithValue("@category_id", product.CategoryId);
-        command.ExecuteNonQuery();
+        connection.Execute(
+            "insert into products (name, price, category_id) values (@Name, @Price, @CategoryId)",
+            new
+            {
+                Name = product.Name ?? "",
+                product.Price,
+                product.CategoryId
+            });
     }
 
     public void UpdateProduct(Product product)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand( "update products set name = @name, price = @price, category_id = @category_id where id = @id", connection);
-
-        command.Parameters.AddWithValue("@id", product.Id);
-        command.Parameters.AddWithValue("@name", product.Name?? "" );
-        command.Parameters.AddWithValue("@price", product.Price);
-        command.Parameters.AddWithValue("@category_id", product.CategoryId);
-
-        command.ExecuteNonQuery();
+        connection.Execute(
+            "update products set name = @Name, price = @Price, category_id = @CategoryId where id = @Id",
+            new
+            {
+                product.Id,
+                Name = product.Name ?? "",
+                product.Price,
+                product.CategoryId
+            });
     }
 
     public void DeleteProduct(int id)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand("delete from products where id = @id", connection);
-
-        command.Parameters.AddWithValue("@id", id);
-        command.ExecuteNonQuery();
+        connection.Execute(
+            "delete from products where id = @Id",
+            new { Id = id });
     }
 
     public Product GetProduct(int id)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand( "select id, name, price, category_id from products where id = @id",  connection);
+        var product = connection.QueryFirstOrDefault<Product>(
+            "select id, name, price, category_id as CategoryId from products where id = @Id",
+            new { Id = id });
 
-        command.Parameters.AddWithValue("@id", id);
-
-        using var reader = command.ExecuteReader();
-
-        if (reader.Read())
+        if (product == null)
         {
-            return new Product
-            {
-                Id = reader.GetInt32(0),
-                Name = reader.GetString(1),
-                Price = reader.GetDecimal(2),
-                CategoryId = reader.GetInt32(3)
-            };
+            throw new Exception("Product not found");
         }
 
-        throw new Exception("Product not found");
+        return product;
     }
 
     public List<Product> GetProducts()
     {
-        var products = new List<Product>();
-
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand( "select id, name, price, category_id from products order by id", connection);
-
-        using var reader = command.ExecuteReader();
-
-        while (reader.Read())
-        {
-            products.Add(new Product
-            {
-                Id = reader.GetInt32(0),
-                Name = reader.GetString(1),
-                Price = reader.GetDecimal(2),
-                CategoryId = reader.GetInt32(3)
-            });
-        }
-
-        return products;
+        return connection.Query<Product>(
+            "select id, name, price, category_id as CategoryId from products order by id")
+            .ToList();
     }
+
+    public List<Product> GetProductsByCategory(int categoryId)
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.Query<Product>(
+            "select id, name, price, category_id as CategoryId from products where category_id = @CategoryId order by id",
+            new { CategoryId = categoryId }).ToList();
+    }
+
+    public int GetAmountOfProducts()
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<int>(
+            "select count(*) from products");
+    }
+
+    public int GetAmountOfCategories()
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<int>(
+            "select count(*) from categories");
+    }
+
+    public int GetAmountOfProductsByCategory(int categoryId)
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<int>(
+            "select count(*) from products where category_id = @CategoryId",
+            new { CategoryId = categoryId });
+    }
+
+    public decimal GetMinPriceOfProductByCategory(int categoryId)
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<decimal>(
+            "select min(price) from products where category_id = @CategoryId",
+            new { CategoryId = categoryId });
+    }
+
+    public decimal GetMaxPriceOfProductByCategory(int categoryId)
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<decimal>(
+            "select max(price) from products where category_id = @CategoryId",
+            new { CategoryId = categoryId });
+    }
+
+    public decimal GetAveragePriceOfProductByCategory(int categoryId)
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<decimal>(
+            "select avg(price) from products where category_id = @CategoryId",
+            new { CategoryId = categoryId });
+    }
+
+    public decimal GetTotalPriceOfProducts()
+    {
+        using var connection = _database.GetConnection();
+
+        return connection.QuerySingle<decimal>(
+            "select coalesce(sum(price), 0) from products");
+    }
+
 }

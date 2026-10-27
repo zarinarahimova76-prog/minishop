@@ -1,93 +1,63 @@
+
+using Dapper;
 using Domain.Interfaces;
 using Domain.Models;
 using Infrastructure.Data;
-using Npgsql;
 
 namespace Infrastructure.Repositories;
 
 public class CategoryRepository : ICategoryRepository
 {
-   private Database _database = new Database();
+    private Database _database = new Database();
 
     public void AddCategory(Category category)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
-        using var command = new NpgsqlCommand("insert into categories (name) values (@name)", connection);
 
-        command.Parameters.AddWithValue("@name", category.Name);
-        command.ExecuteNonQuery();
+        connection.Execute(
+            "insert into categories (name) values (@Name)",
+            new { category.Name });
     }
 
     public void UpdateCategory(Category category)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand(
-            "update categories set name = @name where id = @id", connection);
-
-        command.Parameters.AddWithValue("@id", category.Id);
-        command.Parameters.AddWithValue("@name", category.Name);
-        command.ExecuteNonQuery();
+        connection.Execute(
+            "update categories set name = @Name where id = @Id",
+            new { category.Id, category.Name });
     }
 
     public void DeleteCategory(int id)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand( "delete from categories where id = @id", connection);
-
-        command.Parameters.AddWithValue("@id", id);
-        command.ExecuteNonQuery();
+        connection.Execute(
+            "delete from categories where id = @Id",
+            new { Id = id });
     }
 
     public Category GetCategory(int id)
     {
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand(
-            "select id, name from categories where id = @id", connection);
+        var category = connection.QueryFirstOrDefault<Category>(
+            "select id, name from categories where id = @Id",
+            new { Id = id });
 
-        command.Parameters.AddWithValue("@id", id);
-
-        using var reader = command.ExecuteReader();
-
-        if (reader.Read())
+        if (category == null)
         {
-            return new Category
-            {
-                Id = reader.GetInt32(0),
-                Name = reader.GetString(1)
-            };
+            throw new Exception("Category not found");
         }
 
-        throw new Exception("Category not found");
+        return category;
     }
 
     public List<Category> GetCategories()
     {
-        var categories = new List<Category>();
-
         using var connection = _database.GetConnection();
-        connection.Open();
 
-        using var command = new NpgsqlCommand(
-            "select id, name from categories order by id", connection);
-
-        using var reader = command.ExecuteReader();
-
-        while (reader.Read())
-        {
-            categories.Add(new Category
-            {
-                Id = reader.GetInt32(0),
-                Name = reader.GetString(1)
-            });
-        }
-
-        return categories;
+        return connection.Query<Category>(
+            "select id, name from categories order by id").ToList();
     }
 }
