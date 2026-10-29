@@ -10,38 +10,38 @@ public class CategoryRepository : ICategoryRepository
 {
     private Database _database = new Database();
 
-    public void AddCategory(Category category)
+    public async Task AddCategory(Category category)
     {
         using var connection = _database.GetConnection();
 
-        connection.Execute(
+        await connection.ExecuteAsync(
             "insert into categories (name) values (@Name)",
             new { category.Name });
     }
 
-    public void UpdateCategory(Category category)
+    public async Task UpdateCategory(Category category)
     {
         using var connection = _database.GetConnection();
 
-        connection.Execute(
+        await connection.ExecuteAsync(
             "update categories set name = @Name where id = @Id",
             new { category.Id, category.Name });
     }
 
-    public void DeleteCategory(int id)
+    public async Task DeleteCategory(int id)
     {
         using var connection = _database.GetConnection();
 
-        connection.Execute(
+        await connection.ExecuteAsync(
             "delete from categories where id = @Id",
             new { Id = id });
     }
 
-    public Category GetCategory(int id)
+    public async Task<Category> GetCategory(int id)
     {
         using var connection = _database.GetConnection();
 
-        var category = connection.QueryFirstOrDefault<Category>(
+        var category = await connection.QueryFirstOrDefaultAsync<Category>(
             "select id, name from categories where id = @Id",
             new { Id = id });
 
@@ -53,11 +53,13 @@ public class CategoryRepository : ICategoryRepository
         return category;
     }
 
-    public List<Category> GetCategories()
+    public async Task<List<Category>> GetCategories()
     {
         using var connection = _database.GetConnection();
 
-        return connection.Query<Category>(
-            "select id, name from categories order by id").ToList();
+        var categories = await connection.QueryAsync<Category>(
+            "select id, name from categories order by id");
+
+        return categories.ToList();
     }
 }

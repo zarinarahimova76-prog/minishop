@@ -5,18 +5,18 @@ namespace Domain.Interfaces;
 
 public interface IProductRepository
 {
-    void AddProduct(Product product);
-    void UpdateProduct(Product product);
-    void DeleteProduct(int id);
-    Product GetProduct(int id);
-    List<Product> GetProducts();
+    Task AddProduct(Product product);
+    Task UpdateProduct(Product product);
+    Task DeleteProduct(int id);
+    Task<Product> GetProduct(int id);
+    Task<List<Product>> GetProducts();
 
-    List<Product> GetProductsByCategory(int categoryId);
-    int GetAmountOfProducts();
-    int GetAmountOfCategories();
-    int GetAmountOfProductsByCategory(int categoryId);
-    decimal GetMinPriceOfProductByCategory(int categoryId);
-    decimal GetMaxPriceOfProductByCategory(int categoryId);
-    decimal GetAveragePriceOfProductByCategory(int categoryId);
-    decimal GetTotalPriceOfProducts();
+    Task<List<Product>> GetProductsByCategory(int categoryId);
+    Task<int> GetAmountOfProducts();
+    Task<int> GetAmountOfCategories();
+    Task<int> GetAmountOfProductsByCategory(int categoryId);
+    Task<decimal> GetMinPriceOfProductByCategory(int categoryId);
+    Task<decimal> GetMaxPriceOfProductByCategory(int categoryId);
+    Task<decimal> GetAveragePriceOfProductByCategory(int categoryId);
+    Task<decimal> GetTotalPriceOfProducts();
 }
